@@ -7,8 +7,23 @@
 //
 
 import UIKit
+import CoreData
 
 class CreateCompanyVC: UIViewController {
+
+    let operationType: OperationType
+    var createCompanyVCDelegate: createCompanyVCDelegate?
+
+
+    init(operationType: OperationType, createCompanyVCDelegate: createCompanyVCDelegate?) {
+        self.operationType = operationType
+        self.createCompanyVCDelegate = createCompanyVCDelegate
+        super.init(nibName: nil, bundle: nil)
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
 
     let datePicker: UIDatePicker = {
         let dp = UIDatePicker()
@@ -53,8 +68,6 @@ class CreateCompanyVC: UIViewController {
     }()
 
     var verticalSV: UIStackView!
-
-    var createCompanyVCDelegate: createCompanyVCDelegate?
 
     let imageView: UIImageView = {
         let im = UIImageView()
@@ -154,10 +167,25 @@ class CreateCompanyVC: UIViewController {
 
     @objc private func doneButtonTapped() {
         navigationController?.popViewController(animated: true)
-        let name = nameTextField.text ?? "Not avialable"
-        let foundedDate = dateButton.titleLabel?.text ?? "Not avialable"
-        let company = Company(name: name, foundedDate: foundedDate)
+        
+        let appDelegate = UIApplication.shared.delegate as? AppDelegate
 
-        createCompanyVCDelegate?.addedCompany(company: company)
+        let context = appDelegate?.persistentContainer.viewContext
+
+        let company: NSManagedObject
+
+        switch operationType {
+        case .create:
+            company = NSEntityDescription.insertNewObject(forEntityName: "CoreCompany", into: context!)
+        case .edit(let oldCompany, _):
+            company = oldCompany
+        }
+
+        company.setValue(nameTextField.text ?? "lalalal", forKey: "name")
+        company.setValue(Date(), forKey: "date")
+
+        appDelegate?.saveContext()
+
+        createCompanyVCDelegate?.addedCompany(operationType: operationType, company: company)
     }
 }

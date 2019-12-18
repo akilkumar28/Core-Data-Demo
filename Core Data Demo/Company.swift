@@ -6,9 +6,9 @@
 //  Copyright © 2019 AKIL KUMAR THOTA. All rights reserved.
 //
 
-import Foundation
-
-struct Company {
-    let name: String
-    let foundedDate: String
-}
+//import Foundation
+//
+//struct Company {
+//    let name: String
+//    let foundedDate: Date
+//}

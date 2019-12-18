@@ -7,14 +7,20 @@
 //
 
 import UIKit
+import CoreData
+
+enum OperationType {
+    case create
+    case edit(company: NSManagedObject, indexPath: IndexPath)
+}
 
 protocol createCompanyVCDelegate {
-    func addedCompany(company: Company)
+    func addedCompany(operationType: OperationType, company: NSManagedObject)
 }
 
 final class CompanyVC: UITableViewController {
 
-    var companies: [Company] = [Company(name: "Microsoft", foundedDate: "29 09 10")]
+    var companies: [NSManagedObject] = []
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -23,6 +29,24 @@ final class CompanyVC: UITableViewController {
 
         configureNavBar()
         configureTableViewAppearance()
+
+        fetchCompanies()
+    }
+
+    private func fetchCompanies() {
+        let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: "CoreCompany")
+
+        let appDelegate = UIApplication.shared.delegate as? AppDelegate
+
+        let context = appDelegate?.persistentContainer.viewContext
+
+        guard let companies = try? context?.fetch(fetchRequest) as? [NSManagedObject] else {
+            fatalError()
+        }
+
+        self.companies = companies
+
+        tableView.reloadData()
     }
 
     private func configureTableViewAppearance() {
@@ -48,8 +72,7 @@ final class CompanyVC: UITableViewController {
     }
 
     @objc private func addButtonTapped() {
-        let createCompanyVC = CreateCompanyVC()
-        createCompanyVC.createCompanyVCDelegate = self
+        let createCompanyVC = CreateCompanyVC(operationType: .create, createCompanyVCDelegate: self)
         navigationController?.pushViewController(createCompanyVC, animated: true)
     }
 }
@@ -62,7 +85,7 @@ extension CompanyVC {
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "cell", for: indexPath) as! CompanyCell
         let company = companies[indexPath.row]
-        cell.textLabel?.text = company.name
+        cell.textLabel?.text = company.value(forKey: "name") as? String
         cell.imageView?.image = UIImage(systemName: "airplane")
         return cell
     }
@@ -85,6 +108,30 @@ extension CompanyVC {
     override func tableView(_ tableView: UITableView, viewForFooterInSection section: Int) -> UIView? {
         return UIView()
     }
+
+    override func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
+        let deleteAction = UIContextualAction(style: .destructive, title: "Delete") { (action, view, block) in
+            print("delete tapped")
+            let company = self.companies.remove(at: indexPath.row)
+            tableView.deleteRows(at: [indexPath], with: .automatic)
+
+            let appDelegate = UIApplication.shared.delegate as? AppDelegate
+            let context = appDelegate?.persistentContainer.viewContext
+            context?.delete(company)
+            block(true)
+        }
+
+        let editAction = UIContextualAction(style: .normal, title: "Edit") { (action, view, block) in
+            print("edit tapped")
+            let company = self.companies[indexPath.row]
+            let createCompanyVC = CreateCompanyVC(operationType: .edit(company: company, indexPath: indexPath), createCompanyVCDelegate: self)
+            createCompanyVC.nameTextField.text = company.value(forKey: "name") as? String
+            self.navigationController?.pushViewController(createCompanyVC, animated: true)
+            block(true)
+        }
+        let config = UISwipeActionsConfiguration(actions: [deleteAction, editAction])
+        return config
+    }
 }
 
 extension UIColor {
@@ -94,9 +141,14 @@ extension UIColor {
 }
 
 extension CompanyVC: createCompanyVCDelegate {
-    func addedCompany(company: Company) {
-        companies.append(company)
-        let indexPath = IndexPath(row: companies.count - 1, section: 0)
-        tableView.insertRows(at: [indexPath], with: .automatic)
+    func addedCompany(operationType: OperationType, company: NSManagedObject) {
+        switch operationType {
+        case .create:
+            companies.append(company)
+            let indexPath = IndexPath(row: companies.count - 1, section: 0)
+            tableView.insertRows(at: [indexPath], with: .automatic)
+        case .edit(let _, let indexPath):
+            tableView.reloadRows(at: [indexPath], with: .automatic)
+        }
     }
 }
