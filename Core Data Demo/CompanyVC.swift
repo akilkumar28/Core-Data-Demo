@@ -86,7 +86,10 @@ extension CompanyVC {
         let cell = tableView.dequeueReusableCell(withIdentifier: "cell", for: indexPath) as! CompanyCell
         let company = companies[indexPath.row]
         cell.textLabel?.text = company.value(forKey: "name") as? String
-        cell.imageView?.image = UIImage(systemName: "airplane")
+        if let imgData = company.value(forKey: "image") as? Data {
+            cell.imageView?.image = UIImage(data: imgData)
+        }
+
         return cell
     }
 
@@ -106,7 +109,14 @@ extension CompanyVC {
     }
 
     override func tableView(_ tableView: UITableView, viewForFooterInSection section: Int) -> UIView? {
-        return UIView()
+        let label = UILabel()
+        label.text = "No more rows to see"
+        label.font = UIFont.boldSystemFont(ofSize: 18)
+        return label
+    }
+
+    override func tableView(_ tableView: UITableView, heightForFooterInSection section: Int) -> CGFloat {
+        return companies.count > 0 ? 150 : 0
     }
 
     override func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
@@ -132,6 +142,12 @@ extension CompanyVC {
         let config = UISwipeActionsConfiguration(actions: [deleteAction, editAction])
         return config
     }
+
+    override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        let parentCompany = companies[indexPath.row]
+        let employeeVC = EmployeeVC(parentCompany: parentCompany)
+        navigationController?.pushViewController(employeeVC, animated: true)
+    }
 }
 
 extension UIColor {
@@ -147,7 +163,7 @@ extension CompanyVC: createCompanyVCDelegate {
             companies.append(company)
             let indexPath = IndexPath(row: companies.count - 1, section: 0)
             tableView.insertRows(at: [indexPath], with: .automatic)
-        case .edit(let _, let indexPath):
+        case .edit(_, let indexPath):
             tableView.reloadRows(at: [indexPath], with: .automatic)
         }
     }

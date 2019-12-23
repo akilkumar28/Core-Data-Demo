@@ -73,7 +73,7 @@ class CreateCompanyVC: UIViewController {
         let im = UIImageView()
         im.translatesAutoresizingMaskIntoConstraints = false
         im.image = UIImage(systemName: "questionmark.square.fill")
-        im.contentMode = .scaleAspectFit
+        im.contentMode = .scaleAspectFill
         return im
     }()
 
@@ -150,7 +150,9 @@ class CreateCompanyVC: UIViewController {
     }
 
     @objc private func selectPhotoTapped() {
-        print("button tapped")
+        let imagePicker = UIImagePickerController()
+        imagePicker.delegate = self
+        present(imagePicker, animated: true, completion: nil)
     }
 
     @objc private func dateButtonTapped() {
@@ -184,8 +186,22 @@ class CreateCompanyVC: UIViewController {
         company.setValue(nameTextField.text ?? "lalalal", forKey: "name")
         company.setValue(Date(), forKey: "date")
 
+        if let image = imageView.image {
+            let imgData = image.jpegData(compressionQuality: 0.8)
+            company.setValue(imgData, forKey: "image")
+        }
+
         appDelegate?.saveContext()
 
         createCompanyVCDelegate?.addedCompany(operationType: operationType, company: company)
+    }
+}
+
+extension CreateCompanyVC: UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+    func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+        if let image = info[UIImagePickerController.InfoKey.originalImage] as? UIImage {
+            imageView.image = image
+            picker.dismiss(animated: true, completion: nil)
+        }
     }
 }
